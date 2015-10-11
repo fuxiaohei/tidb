@@ -14,6 +14,7 @@
 package kv
 
 import (
+	"github.com/ngaut/log"
 	"github.com/ngaut/pool"
 	"github.com/pingcap/tidb/util/errors2"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -128,6 +129,7 @@ func (us *UnionStore) Delete(k []byte) error {
 		val, err = us.Snapshot.Get(k)
 		if err != nil {
 			if IsErrNotFound(err) {
+				log.Error("!?")
 				return ErrNotExist
 			}
 		}

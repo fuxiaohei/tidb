@@ -83,6 +83,7 @@ func (s *dbSnapshot) MvccGet(k kv.Key, ver kv.Version) ([]byte, error) {
 	}
 	// No such key (or it's tombstone).
 	if rawKey == nil {
+		log.Errorf("%q => %q", startKey, s.rawIt.Key())
 		return nil, kv.ErrNotExist
 	}
 	return append([]byte(nil), v...), nil
@@ -139,17 +140,9 @@ func (it *dbIter) Next(fn kv.FnKeyCmp) (kv.Iterator, error) {
 	var retErr error
 	var engineIter engine.Iterator
 	for {
-		if it.s.rawIt == nil {
-			var err error
-			it.s.rawIt, err = it.s.db.Seek(encKey)
-			if err != nil {
-				return nil, errors.Trace(err)
-			}
-		}
-		engineIter = it.s.rawIt
-		ok := engineIter.Seek(encKey)
+		engineIter, _ = it.s.db.Seek(encKey)
 
-		if !ok || len(engineIter.Key()) == 0 {
+		if !engineIter.Next() {
 			it.valid = false
 			break
 		}
@@ -182,8 +175,10 @@ func (it *dbIter) Next(fn kv.FnKeyCmp) (kv.Iterator, error) {
 			break
 		}
 		// Current key's all versions are deleted, just go next key.
+		engineIter.Release()
 		encKey = codec.EncodeBytes(nil, key.Next())
 	}
+	engineIter.Release()
 	return it, errors.Trace(retErr)
 }
 
